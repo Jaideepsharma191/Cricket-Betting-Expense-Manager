@@ -1,15 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { User, Mail, Lock, Shield, Bell, Moon, Download } from "lucide-react";
+import { User, Mail, Lock, Shield, Bell, Moon, Download, Loader2 } from "lucide-react";
 
 export default function SettingsPage() {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [profile, setProfile] = useState<{ username: string; email: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const res = await fetch("/api/user/profile");
+        if (res.ok) {
+          const data = await res.json();
+          setProfile(data.user);
+        }
+      } catch (error) {
+        console.error("Failed to fetch profile", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchProfile();
+  }, []);
 
   const handleDeleteData = async () => {
     if (!confirm("Are you sure you want to permanently delete all your data? This cannot be undone.")) return;
@@ -30,6 +50,14 @@ export default function SettingsPage() {
       setIsDeleting(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -60,15 +88,23 @@ export default function SettingsPage() {
               <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
                 <User className="w-4 h-4" /> Username
               </label>
-              <Input defaultValue="CricketFan123" className="text-white" />
+              <Input 
+                value={profile?.username || ""} 
+                readOnly 
+                className="text-white bg-secondary/50 cursor-not-allowed" 
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
                 <Mail className="w-4 h-4" /> Email
               </label>
-              <Input defaultValue="user@example.com" className="text-white" />
+              <Input 
+                value={profile?.email || ""} 
+                readOnly 
+                className="text-white bg-secondary/50 cursor-not-allowed" 
+              />
             </div>
-            <Button className="w-full mt-4">Save Profile</Button>
+            <Button className="w-full mt-4" disabled>Save Profile (Coming Soon)</Button>
           </CardContent>
         </Card>
 
@@ -99,7 +135,7 @@ export default function SettingsPage() {
               </label>
               <Input type="password" placeholder="••••••••" className="text-white" />
             </div>
-            <Button className="w-full mt-4">Update Password</Button>
+            <Button className="w-full mt-4" disabled>Update Password (Coming Soon)</Button>
           </CardContent>
         </Card>
 
@@ -144,14 +180,14 @@ export default function SettingsPage() {
               <h4 className="text-sm font-medium text-white">Export Data</h4>
               <p className="text-xs text-zinc-400">Download your betting data in CSV or PDF format.</p>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm">Export CSV</Button>
-                <Button variant="outline" size="sm">Export PDF</Button>
+                <Button variant="outline" size="sm" disabled>Export CSV</Button>
+                <Button variant="outline" size="sm" disabled>Export PDF</Button>
               </div>
             </div>
             <div className="p-4 rounded-lg bg-secondary/30 border border-border space-y-3">
               <h4 className="text-sm font-medium text-white">Import Data</h4>
               <p className="text-xs text-zinc-400">Import your betting data from a CSV file.</p>
-              <Button variant="outline" size="sm">Import CSV</Button>
+              <Button variant="outline" size="sm" disabled>Import CSV</Button>
             </div>
             <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30 space-y-3">
               <h4 className="text-sm font-medium text-destructive">Danger Zone</h4>

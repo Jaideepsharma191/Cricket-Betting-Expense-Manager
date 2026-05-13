@@ -1,20 +1,52 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowDownIcon, ArrowUpIcon, IndianRupee, TrendingUp, Activity } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, IndianRupee, TrendingUp, Activity, Loader2 } from "lucide-react";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-const data = [
-  { name: "Mon", profit: 4000, loss: 2400 },
-  { name: "Tue", profit: 3000, loss: 1398 },
-  { name: "Wed", profit: 2000, loss: 9800 },
-  { name: "Thu", profit: 2780, loss: 3908 },
-  { name: "Fri", profit: 1890, loss: 4800 },
-  { name: "Sat", profit: 2390, loss: 3800 },
-  { name: "Sun", profit: 3490, loss: 4300 },
-];
-
 export default function DashboardPage() {
+  const [data, setData] = useState<any>(null);
+  const [recentBets, setRecentBets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [analyticsRes, betsRes] = await Promise.all([
+          fetch("/api/analytics"),
+          fetch("/api/bets?limit=5")
+        ]);
+
+        if (analyticsRes.ok && betsRes.ok) {
+          const analyticsData = await analyticsRes.json();
+          const betsData = await betsRes.json();
+          
+          setData(analyticsData);
+          setRecentBets(betsData.bets);
+        }
+      } catch (error) {
+        console.error("Failed to fetch dashboard data", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Ensure safe fallbacks
+  const summary = data?.summary || { currentBalance: 0, totalProfit: 0, totalLoss: 0, pendingBets: 0 };
+  const chartData = data?.chartData || [];
+
   return (
     <div className="space-y-6">
       <div>
@@ -29,10 +61,9 @@ export default function DashboardPage() {
             <IndianRupee className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">₹45,231.89</div>
-            <p className="text-xs text-primary mt-1 flex items-center">
-              <ArrowUpIcon className="h-3 w-3 mr-1" />
-              +20.1% from last month
+            <div className="text-2xl font-bold text-white">₹{summary.currentBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+            <p className="text-xs text-zinc-400 mt-1 flex items-center">
+              Net balance from all settled bets
             </p>
           </CardContent>
         </Card>
@@ -42,7 +73,7 @@ export default function DashboardPage() {
             <TrendingUp className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-accent">+₹12,234.00</div>
+            <div className="text-2xl font-bold text-accent">+₹{summary.totalProfit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
             <p className="text-xs text-zinc-400 mt-1">Overall earnings</p>
           </CardContent>
         </Card>
@@ -52,7 +83,7 @@ export default function DashboardPage() {
             <TrendingUp className="h-4 w-4 text-destructive rotate-180" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">-₹4,120.00</div>
+            <div className="text-2xl font-bold text-destructive">-₹{summary.totalLoss.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
             <p className="text-xs text-zinc-400 mt-1">Overall losses</p>
           </CardContent>
         </Card>
@@ -62,7 +93,7 @@ export default function DashboardPage() {
             <Activity className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">12</div>
+            <div className="text-2xl font-bold text-white">{summary.pendingBets}</div>
             <p className="text-xs text-zinc-400 mt-1">Pending outcomes</p>
           </CardContent>
         </Card>
@@ -71,19 +102,25 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4 bg-gradient-to-br from-card to-card/50">
           <CardHeader>
-            <CardTitle className="text-white">Weekly Performance</CardTitle>
+            <CardTitle className="text-white">Monthly Performance</CardTitle>
           </CardHeader>
           <CardContent className="pl-2">
             <div className="h-[350px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data}>
-                  <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value}`} />
-                  <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155' }} />
-                  <Bar dataKey="profit" fill="#10b981" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="loss" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value}`} />
+                    <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155' }} />
+                    <Bar dataKey="profit" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="loss" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-zinc-500">
+                  No data available yet
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -94,20 +131,26 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-8">
-              {[1, 2, 3, 4, 5].map((_, i) => (
-                <div key={i} className="flex items-center">
-                  <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary flex items-center justify-center mr-4">
-                    <Activity className="w-4 h-4 text-primary" />
+              {recentBets.length > 0 ? (
+                recentBets.map((bet) => (
+                  <div key={bet._id} className="flex items-center">
+                    <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary flex items-center justify-center mr-4">
+                      <Activity className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="ml-4 space-y-1">
+                      <p className="text-sm font-medium leading-none text-white">{bet.matchName}</p>
+                      <p className="text-sm text-zinc-400">Bet on {bet.teamName}</p>
+                    </div>
+                    <div className={`ml-auto font-medium ${bet.status === "Won" ? "text-accent" : bet.status === "Lost" ? "text-destructive" : "text-primary"}`}>
+                      {bet.status === "Won" ? "+" : bet.status === "Lost" ? "-" : ""}₹{bet.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </div>
                   </div>
-                  <div className="ml-4 space-y-1">
-                    <p className="text-sm font-medium leading-none text-white">CSK vs MI</p>
-                    <p className="text-sm text-zinc-400">Bet on Chennai Super Kings</p>
-                  </div>
-                  <div className="ml-auto font-medium text-accent">
-                    +₹1,999.00
-                  </div>
+                ))
+              ) : (
+                <div className="text-zinc-500 text-sm text-center py-4">
+                  No recent activities found
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>
