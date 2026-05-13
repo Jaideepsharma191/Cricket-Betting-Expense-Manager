@@ -80,8 +80,8 @@ export default function TransactionsPage() {
           <CardTitle className="text-white">Transaction History</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border border-border">
-            <table className="w-full text-sm text-left text-zinc-300">
+          <div className="rounded-md border border-border overflow-x-auto">
+            <table className="w-full text-sm text-left text-zinc-300 min-w-[500px]">
               <thead className="text-xs text-zinc-400 uppercase bg-secondary/50">
                 <tr>
                   <th className="px-6 py-3">Type</th>

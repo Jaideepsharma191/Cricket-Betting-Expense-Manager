@@ -137,9 +137,9 @@ export default function DashboardPage() {
                     <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary flex items-center justify-center mr-4">
                       <Activity className="w-4 h-4 text-primary" />
                     </div>
-                    <div className="ml-4 space-y-1">
-                      <p className="text-sm font-medium leading-none text-white">{bet.matchName}</p>
-                      <p className="text-sm text-zinc-400">Bet on {bet.teamName}</p>
+                    <div className="ml-4 space-y-1 flex-1 min-w-0">
+                      <p className="text-sm font-medium leading-none text-white truncate">{bet.matchName}</p>
+                      <p className="text-sm text-zinc-400 truncate">Bet on {bet.teamName}</p>
                     </div>
                     <div className={`ml-auto font-medium ${bet.status === "Won" ? "text-accent" : bet.status === "Lost" ? "text-destructive" : "text-primary"}`}>
                       {bet.status === "Won" ? "+" : bet.status === "Lost" ? "-" : ""}₹{bet.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
