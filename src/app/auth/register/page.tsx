@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, UserPlus } from "lucide-react";
+import { GoogleLogin } from "@react-oauth/google";
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -52,6 +53,28 @@ export default function RegisterPage() {
       router.push("/dashboard");
     } catch {
       setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential: credentialResponse.credential }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Google login failed");
+        return;
+      }
+      router.push("/dashboard");
+    } catch {
+      setError("Something went wrong with Google Login.");
     } finally {
       setLoading(false);
     }
@@ -156,6 +179,26 @@ export default function RegisterPage() {
                 </span>
               )}
             </Button>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-zinc-500 rounded-lg">Or continue with</span>
+              </div>
+            </div>
+
+            <div className="flex justify-center w-full">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => setError("Google Signup Failed")}
+                theme="filled_black"
+                shape="pill"
+                text="continue_with"
+                size="large"
+              />
+            </div>
           </form>
 
           <div className="mt-6 text-center">
