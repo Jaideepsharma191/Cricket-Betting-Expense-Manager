@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowDownRight, ArrowUpRight, Plus, Loader2 } from "lucide-react";
+import Link from "next/link";
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -44,9 +45,11 @@ export default function TransactionsPage() {
           <h2 className="text-3xl font-bold tracking-tight text-white">Expense Tracking</h2>
           <p className="text-zinc-400">Manage your deposits and withdrawals.</p>
         </div>
-        <Button className="flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Add Transaction
-        </Button>
+        <Link href="/dashboard/transactions/add">
+          <Button className="flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Add Transaction
+          </Button>
+        </Link>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
