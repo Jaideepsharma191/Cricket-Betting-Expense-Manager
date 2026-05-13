@@ -3,13 +3,13 @@ import dbConnect from "@/lib/mongodb";
 import { User } from "@/models/User";
 import bcrypt from "bcryptjs";
 import { signToken } from "@/lib/auth";
-import { cookies } from "next/headers";
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
 
-    const { username, email, password } = await req.json();
+    const body = await req.json();
+    const { username, email, password } = body;
 
     if (!username || !email || !password) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 });
@@ -26,9 +26,6 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Safely drop the problematic googleId index from the live database to prevent 500 errors
-    await User.collection.dropIndex("googleId_1").catch(() => {});
-
     const user = await User.create({
       username,
       email,
@@ -38,8 +35,13 @@ export async function POST(req: NextRequest) {
 
     const token = signToken({ id: user._id.toString(), email: user.email, role: user.role });
 
-    const cookieStore = await cookies();
-    cookieStore.set("token", token, {
+    // Set the cookie directly on the response object to avoid conflicts
+    const response = NextResponse.json({
+      message: "User created successfully",
+      user: { id: user._id, username: user.username, email: user.email, role: user.role },
+    }, { status: 201 });
+
+    response.cookies.set("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
@@ -47,12 +49,9 @@ export async function POST(req: NextRequest) {
       path: "/",
     });
 
-    return NextResponse.json({
-      message: "User created successfully",
-      user: { id: user._id, username: user.username, email: user.email, role: user.role },
-    }, { status: 201 });
-  } catch (error) {
-    console.error("Register error:", error);
+    return response;
+  } catch (error: any) {
+    console.error("Register error:", error?.message || error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

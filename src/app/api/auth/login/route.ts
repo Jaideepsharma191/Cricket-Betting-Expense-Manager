@@ -3,7 +3,6 @@ import dbConnect from "@/lib/mongodb";
 import { User } from "@/models/User";
 import bcrypt from "bcryptjs";
 import { signToken } from "@/lib/auth";
-import { cookies } from "next/headers";
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,8 +26,13 @@ export async function POST(req: NextRequest) {
 
     const token = signToken({ id: user._id.toString(), email: user.email, role: user.role });
 
-    const cookieStore = await cookies();
-    cookieStore.set("token", token, {
+    // Set the cookie directly on the response object
+    const response = NextResponse.json({
+      message: "Login successful",
+      user: { id: user._id, username: user.username, email: user.email, role: user.role },
+    });
+
+    response.cookies.set("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
@@ -36,12 +40,9 @@ export async function POST(req: NextRequest) {
       path: "/",
     });
 
-    return NextResponse.json({
-      message: "Login successful",
-      user: { id: user._id, username: user.username, email: user.email, role: user.role },
-    });
-  } catch (error) {
-    console.error("Login error:", error);
+    return response;
+  } catch (error: any) {
+    console.error("Login error:", error?.message || error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
