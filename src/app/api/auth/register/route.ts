@@ -26,6 +26,9 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    // Safely drop the problematic googleId index from the live database to prevent 500 errors
+    await User.collection.dropIndex("googleId_1").catch(() => {});
+
     const user = await User.create({
       username,
       email,

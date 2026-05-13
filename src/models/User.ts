@@ -18,7 +18,7 @@ const UserSchema = new Schema<IUser>(
     email: { type: String, required: true, unique: true },
     password: { type: String }, // optional for OAuth users if we add later
     authProvider: { type: String, enum: ["local", "google"], default: "local" },
-    googleId: { type: String, sparse: true, unique: true },
+    googleId: { type: String },
     role: { type: String, enum: ["user", "admin"], default: "user" },
     profilePic: { type: String },
   },
