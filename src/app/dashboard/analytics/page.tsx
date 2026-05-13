@@ -1,21 +1,70 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts";
+import { Loader2 } from "lucide-react";
 
 export default function AnalyticsPage() {
-  const winLossData = [
-    { name: "Won", value: 12, color: "#10b981" },
-    { name: "Lost", value: 5, color: "#ef4444" },
-    { name: "Pending", value: 3, color: "#f59e0b" },
-  ];
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const teamPerformance = [
-    { team: "CSK", ROI: "+15.2%", bets: 8 },
-    { team: "MI", ROI: "-5.4%", bets: 5 },
-    { team: "RCB", ROI: "+2.1%", bets: 6 },
-    { team: "KKR", ROI: "+8.9%", bets: 4 },
-  ];
+  useEffect(() => {
+    async function fetchAnalytics() {
+      try {
+        const res = await fetch("/api/analytics");
+        if (res.ok) {
+          const json = await res.json();
+          setData(json);
+        }
+      } catch (error) {
+        console.error("Failed to fetch analytics", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchAnalytics();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const summary = data?.summary || {
+    totalProfit: 0,
+    totalLoss: 0,
+    wonBets: 0,
+    lostBets: 0,
+    pendingBets: 0,
+    roi: "0.0",
+  };
+
+  const teamPerformance = data?.teamPerformance || [];
+
+  const winLossData = [
+    { name: "Won", value: summary.wonBets, color: "#10b981" },
+    { name: "Lost", value: summary.lostBets, color: "#ef4444" },
+    { name: "Pending", value: summary.pendingBets, color: "#f59e0b" },
+  ].filter(d => d.value > 0);
+
+  // Fallback for empty state
+  if (winLossData.length === 0) {
+    winLossData.push({ name: "No Bets", value: 1, color: "#334155" });
+  }
+
+  // Find biggest win and loss
+  let biggestWin = { team: "N/A", profit: 0 };
+  let biggestLoss = { team: "N/A", profit: 0 };
+
+  if (teamPerformance.length > 0) {
+    biggestWin = teamPerformance[0]; // array is sorted by profit descending
+    biggestLoss = teamPerformance[teamPerformance.length - 1];
+  }
 
   return (
     <div className="space-y-6">
@@ -65,21 +114,29 @@ export default function AnalyticsPage() {
                   <tr>
                     <th className="px-6 py-3">Team</th>
                     <th className="px-6 py-3 text-center">Total Bets</th>
-                    <th className="px-6 py-3 text-right">ROI</th>
+                    <th className="px-6 py-3 text-right">Profit/Loss</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {teamPerformance.map((item, idx) => (
-                    <tr key={idx} className="border-b border-border hover:bg-secondary/20">
-                      <td className="px-6 py-4 font-medium text-white">{item.team}</td>
-                      <td className="px-6 py-4 text-center">{item.bets}</td>
-                      <td className={`px-6 py-4 text-right font-bold ${
-                        item.ROI.startsWith('+') ? 'text-emerald-500' : 'text-rose-500'
-                      }`}>
-                        {item.ROI}
+                  {teamPerformance.length > 0 ? (
+                    teamPerformance.map((item: any, idx: number) => (
+                      <tr key={idx} className="border-b border-border hover:bg-secondary/20">
+                        <td className="px-6 py-4 font-medium text-white">{item.team}</td>
+                        <td className="px-6 py-4 text-center">{item.bets}</td>
+                        <td className={`px-6 py-4 text-right font-bold ${
+                          item.profit >= 0 ? 'text-emerald-500' : 'text-rose-500'
+                        }`}>
+                          {item.profit >= 0 ? "+" : "-"}₹{Math.abs(item.profit).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={3} className="px-6 py-8 text-center text-zinc-500">
+                        No team performance data available
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
@@ -93,26 +150,32 @@ export default function AnalyticsPage() {
             <CardTitle className="text-sm font-medium text-zinc-400">Total ROI</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-emerald-500">+12.5%</div>
+            <div className={`text-3xl font-bold ${Number(summary.roi) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+              {Number(summary.roi) > 0 ? "+" : ""}{summary.roi}%
+            </div>
             <p className="text-xs text-zinc-400 mt-1">Based on total deposited amount</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-card to-card/50">
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-zinc-400">Most Profitable Match</CardTitle>
+            <CardTitle className="text-sm font-medium text-zinc-400">Most Profitable Team</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold text-white">CSK vs MI (Final)</div>
-            <p className="text-sm text-emerald-500 mt-1">+₹5,400.00</p>
+            <div className="text-xl font-bold text-white">{biggestWin.team}</div>
+            {biggestWin.team !== "N/A" && (
+              <p className="text-sm text-emerald-500 mt-1">+₹{biggestWin.profit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+            )}
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-card to-card/50">
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-zinc-400">Biggest Loss</CardTitle>
+            <CardTitle className="text-sm font-medium text-zinc-400">Biggest Loss Team</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold text-white">RCB vs KKR</div>
-            <p className="text-sm text-rose-500 mt-1">-₹2,000.00</p>
+            <div className="text-xl font-bold text-white">{biggestLoss.profit < 0 ? biggestLoss.team : "N/A"}</div>
+            {biggestLoss.profit < 0 && (
+              <p className="text-sm text-rose-500 mt-1">-₹{Math.abs(biggestLoss.profit).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+            )}
           </CardContent>
         </Card>
       </div>

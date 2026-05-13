@@ -30,6 +30,7 @@ export async function GET() {
     // Total ROI
     const transactions = await Transaction.find({ userId: user.id });
     const totalDeposited = transactions.filter((t) => t.type === "Deposit").reduce((sum, t) => sum + t.amount, 0);
+    const totalWithdrawn = transactions.filter((t) => t.type === "Withdrawal").reduce((sum, t) => sum + t.amount, 0);
     const roi = totalDeposited > 0 ? (((totalProfit - totalLoss) / totalDeposited) * 100).toFixed(1) : "0.0";
 
     // Best performing teams
@@ -65,7 +66,7 @@ export async function GET() {
         totalBetAmount,
         totalProfit,
         totalLoss,
-        currentBalance: totalProfit - totalLoss,
+        currentBalance: totalDeposited - totalWithdrawn + totalProfit - totalLoss,
         pendingBets,
         wonBets,
         lostBets,
